@@ -1,0 +1,9 @@
+aiofiles==24.1.0
+fastapi==0.115.0
+numpy==2.1.2
+pillow==10.4.0
+pydantic==2.9.2
+requests==2.32.3
+torch==2.4.1 --index-url https://download.pytorch.org/whl/cpu
+torchvision==0.19.1 --index-url https://download.pytorch.org/whl/cpu
+uvicorn==0.32.0
