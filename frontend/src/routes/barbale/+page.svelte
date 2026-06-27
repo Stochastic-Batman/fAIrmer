@@ -421,13 +421,13 @@
 	}
 
 	.send-btn {
-		width: 44px;
-		height: 44px;
+		width: 64px;
+		height: 64px;
 		border-radius: 50%;
 		background: var(--green);
 		color: white;
 		border: none;
-		font-size: 1.1rem;
+		font-size: 2rem;
 		cursor: pointer;
 		flex-shrink: 0;
 		transition: background 0.15s;
@@ -646,13 +646,13 @@
 		display: none;
 		align-items: center;
 		justify-content: center;
-		width: 44px;
-		height: 44px;
+		width: 64px;
+		height: 64px;
 		border-radius: 50%;
 		background: var(--cream);
 		border: 1.5px solid var(--sage);
 		cursor: pointer;
-		font-size: 1.2rem;
+		font-size: 2rem;
 		flex-shrink: 0;
 		transition: background 0.15s;
 	}

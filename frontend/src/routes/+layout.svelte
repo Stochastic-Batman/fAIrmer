@@ -5,6 +5,9 @@
 <svelte:head>
 	<title>fAIrmer</title>
 	<link rel="icon" type="image/png" href="/fAIrmer.png" />
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+	<link href="https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap" rel="stylesheet" />
 </svelte:head>
 
 {@render children()}
@@ -22,7 +25,7 @@
 		--gold:   #F7C85C;
 		--cream:  #FFF6C0;
 		--dark:   #1a1a1a;
-		font-family: 'Segoe UI', system-ui, sans-serif;
+		font-family: 'MedievalSharp', 'Segoe UI', system-ui, sans-serif;
 	}
 
 	:global(body) {
