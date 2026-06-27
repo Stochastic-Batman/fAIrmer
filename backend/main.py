@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 
 from contextlib import asynccontextmanager
@@ -46,11 +47,12 @@ def _translate(text: str, source_lang: str, target_lang: str) -> str:
 def _ask_ollama(prompt: str) -> str:
     resp = requests.post(
         f"{OLLAMA_BASE_URL}/api/generate",
-        json={"model": OLLAMA_MODEL, "system": _SYSTEM_PROMPT, "prompt": prompt, "stream": False},
-        timeout=120,
+        json={"model": OLLAMA_MODEL, "system": _SYSTEM_PROMPT, "prompt": prompt, "stream": False, "options": {"num_predict": 1500}},
+        timeout=600,
     )
     resp.raise_for_status()
-    return resp.json()["response"]
+    raw = resp.json()["response"]
+    return re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
 
 
 # Auth
