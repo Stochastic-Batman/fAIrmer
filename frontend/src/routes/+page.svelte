@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 
 	const API = 'http://localhost:8000';
-	const REGIONS = ['Kakheti', 'Imereti', 'Samegrelo', 'Kartli', 'Adjara', 'Guria', 'Racha', 'Svaneti', 'Mtskheta-Mtianeti', 'Kvemo Kartli', 'Shida Kartli', 'Samtskhe-Javakheti'];
+	const REGIONS = ['აჭარა', 'გურია', 'იმერეთი', 'კახეთი', 'მცხეთა-მთიანეთი', 'რაჭა', 'სამეგრელო', 'სამცხე-ჯავახეთი', 'სვანეთი', 'შიდა ქართლი', 'ქვემო ქართლი', 'ქართლი', 'აფხაზეთი'];
 
 	let mode = $state<'login' | 'signup'>('login');
 	let username = $state('');
@@ -32,7 +32,7 @@
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({ username, password })
 				});
-				if (!res.ok) throw new Error('Invalid credentials');
+				if (!res.ok) throw new Error('მომხმარებლის სახელი ან პაროლი არასწორია');
 				const data = await res.json();
 				localStorage.setItem('farmer_session', JSON.stringify({ ...data, is_authenticated: true }));
 				goto('/barbale');
@@ -68,29 +68,29 @@
 	<div class="left">
 		<img src="/fAIrmer.png" alt="fAIrmer logo" class="logo" />
 		<h1>fAIrmer</h1>
-		<p>ML-Powered Agricultural Extension for Inexperienced Georgian Farmers</p>
+		<p>რჩევა, რომელიც მეზობელმაც კი არ იცის</p>
 	</div>
 
 	<div class="right">
 		<div class="card">
 			<div class="toggle">
-				<button class:active={mode === 'login'} onclick={() => { mode = 'login'; error = ''; }}>Login</button>
-				<button class:active={mode === 'signup'} onclick={() => { mode = 'signup'; error = ''; }}>Sign Up</button>
+				<button class:active={mode === 'login'} onclick={() => { mode = 'login'; error = ''; }}>შესვლა</button>
+				<button class:active={mode === 'signup'} onclick={() => { mode = 'signup'; error = ''; }}>შექმენი ანგარიში</button>
 			</div>
 
 			<div class="fields">
-				<input type="text" placeholder="Username" bind:value={username} />
-				<input type="password" placeholder="Passphrase" bind:value={password} />
+				<input type="text" placeholder="მომხმარებლის სახელი" bind:value={username} />
+				<input type="password" placeholder="პაროლი" bind:value={password} />
 
 				{#if mode === 'signup'}
 					<select bind:value={region}>
-						<option value="">Region (optional)</option>
+						<option value="">რეგიონი</option>
 						{#each REGIONS as r}
 							<option value={r}>{r}</option>
 						{/each}
 					</select>
-					<input type="text" placeholder="Primary Crop (e.g. Tomato)" bind:value={primaryCrops} />
-					<input type="text" placeholder="Known Soil Metrics (e.g. Acidic Clay) — optional" bind:value={soilMetrics} />
+					<input type="text" placeholder="ძირითადი კულტურა (მაგ. პომიდორი)" bind:value={primaryCrops} />
+					<input type="text" placeholder="ნიადაგის მახასიათებლები (სურვილისამებრ)" bind:value={soilMetrics} />
 				{/if}
 
 				{#if error}
@@ -98,7 +98,7 @@
 				{/if}
 
 				<button class="cta" onclick={submit} disabled={loading}>
-					{loading ? '...' : 'ბარბალე'}
+					{loading ? '...' : 'განაგრძე'}
 				</button>
 			</div>
 		</div>
@@ -234,5 +234,41 @@
 	.cta:disabled {
 		opacity: 0.6;
 		cursor: not-allowed;
+	}
+
+	@media (max-width: 768px) {
+		.gate {
+			display: flex;
+			flex-direction: column;
+			height: auto;
+			min-height: 100vh;
+		}
+		.left {
+			padding: 1.25rem 1.5rem;
+			gap: 0.4rem;
+			flex-direction: row;
+			justify-content: flex-start;
+			text-align: left;
+		}
+		.logo {
+			width: 44px;
+			height: 44px;
+		}
+		.left h1 {
+			font-size: 1.4rem;
+		}
+		.left p {
+			display: none;
+		}
+		.right {
+			flex: 1;
+			padding: 2rem 1.25rem;
+			align-items: stretch;
+		}
+		.card {
+			max-width: 100%;
+			box-shadow: none;
+			border: 1.5px solid #e8e8e8;
+		}
 	}
 </style>

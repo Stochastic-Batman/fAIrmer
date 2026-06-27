@@ -22,9 +22,13 @@ Farmers connect to the web interface, submit questions in Georgian, and upload c
 
 ### Run
 
+Clone the repo:
 ```bash
-git clone https://github.com/Stochastic-Batman/fAIrmer.git
-cd fAIrmer
+git clone https://github.com/Stochastic-Batman/fAIrmer.git && cd fAIrmer
+```
+
+The command below may take ~30 minutes:
+```bash
 docker compose up --build
 ```
 

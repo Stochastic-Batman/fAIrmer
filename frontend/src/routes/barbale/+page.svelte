@@ -5,15 +5,38 @@
 	const API = 'http://localhost:8000';
 
 	const PRODUCE_EMOJI: Record<string, string> = {
-		'Apple': '🍎', 'Banana': '🍌', 'Bell Pepper': '🫑', 'Bitter Gourd': '🥬',
-		'Capsicum': '🌶️', 'Carrot': '🥕', 'Cucumber': '🥒', 'Mango': '🥭',
-		'Okra': '🫛', 'Orange': '🍊', 'Potato': '🥔', 'Strawberry': '🍓', 'Tomato': '🍅'
+	    'Apple': '🍎', 'Banana': '🍌', 'Bell Pepper': '🫑', 'Bitter Gourd': '🥬',
+	    'Capsicum': '🌶️', 'Carrot': '🥕', 'Cucumber': '🥒', 'Mango': '🥭',
+	    'Okra': '🫛', 'Orange': '🍊', 'Potato': '🥔', 'Strawberry': '🍓', 'Tomato': '🍅'
+	};
+	
+	const PRODUCTS_TO_GEORGIAN: Record<string, string> = {
+	    'Apple': 'ვაშლი', 'Banana': 'ბანანი', 'Bell Pepper': 'ბულგარული წიწაკა', 'bitter gourd': 'მწარე ნესვი',
+	    'Capsicum': 'წიწაკა', 'Carrot': 'სტაფილო', 'Cucumber': 'კიტრი', 'Mango': 'მანგო',
+	    'Okra': 'ბამი', 'Orange': 'ფორთოხალი', 'Potato': 'კარტოფილი', 'Strawberry': 'მარწყვი', 'Tomato': 'პომიდორი'
 	};
 
-	const SUPPORTED = Object.keys(PRODUCE_EMOJI).join(', ');
+	const REGION_EN_TO_KA: Record<string, string> = {
+	    'Kakheti': 'კახეთი', 'Imereti': 'იმერეთი', 'Samegrelo': 'სამეგრელო',
+	    'Kartli': 'ქართლი', 'Adjara': 'აჭარა', 'Guria': 'გურია',
+	    'Racha': 'რაჭა', 'Svaneti': 'სვანეთი', 'Mtskheta-Mtianeti': 'მცხეთა-მთიანეთი',
+	    'Kvemo Kartli': 'ქვემო ქართლი', 'Shida Kartli': 'შიდა ქართლი',
+	    'Samtskhe-Javakheti': 'სამცხე-ჯავახეთი', 'Abkhazia': 'აფხაზეთი',
+	};
+
+	function localizeRegion(r: string): string {
+		return REGION_EN_TO_KA[r] ?? r;
+	}
+
+	function localizeCrops(crops: string): string {
+		return crops.split(',').map(c => PRODUCTS_TO_GEORGIAN[c.trim()] ?? c.trim()).join(', ');
+	}
+
+	const SUPPORTED = Object.values(PRODUCTS_TO_GEORGIAN).join(', ');
 
 	type Message = { role: 'farmer' | 'barbale'; text: string };
 	type ScanResult = { produce: string; freshness: string; confidence: number; advice_ka: string | null };
+	type AlertLog = { alert_id: number; produce: string; freshness: string; confidence: number; advice_ka: string; created_at: string };
 
 	let session = $state<any>(null);
 	let sessionId = $state<number | null>(null);
@@ -26,6 +49,14 @@
 	let imageUrl = $state<string | null>(null);
 	let scanResult = $state<ScanResult | null>(null);
 	let scanLoading = $state(false);
+	let alerts = $state<AlertLog[]>([]);
+
+	async function fetchAlerts(userId: number) {
+		try {
+			const res = await fetch(`${API}/api/alerts/${userId}`);
+			alerts = await res.json();
+		} catch { /* non-critical */ }
+	}
 
 	onMount(async () => {
 		const raw = localStorage.getItem('farmer_session');
@@ -41,6 +72,8 @@
 		});
 		const data = await res.json();
 		sessionId = data.session_id;
+
+		fetchAlerts(session.user_id);
 	});
 
 	$effect(() => {
@@ -96,6 +129,7 @@
 				body: form
 			});
 			scanResult = await res.json();
+			fetchAlerts(session.user_id);
 		} catch {
 			console.error('Scan failed');
 		} finally {
@@ -108,13 +142,13 @@
 	<header>
 		<div class="header-left">
 			<img src="/fAIrmer.png" alt="fAIrmer" class="logo" />
-			<span class="brand">fAIrmer Workspace</span>
+			<span class="brand">fAIrmer</span>
 		</div>
 		<div class="header-right">
 			{#if session}
-				<span>👤 Farmer: {session.username}{session.region ? ` | Region: ${session.region}` : ''}</span>
+				<span>👤 {session.username}</span>
 			{/if}
-			<button class="logout" onclick={logout}>Log out</button>
+			<button class="logout" onclick={logout}>გასვლა</button>
 		</div>
 	</header>
 
@@ -136,7 +170,29 @@
 				{/if}
 			</div>
 
+			{#if scanResult || scanLoading}
+				<div class="mobile-scan-strip">
+					{#if scanLoading}
+						<p class="scanning">ბარბალე უყურებს ფოტოს...</p>
+					{:else if scanResult}
+						<div class="strip-row">
+							<span>{PRODUCE_EMOJI[scanResult.produce] ?? '🌿'} {scanResult.produce}</span>
+							<span class="badge" class:fresh={scanResult.freshness === 'Fresh'} class:rotten={scanResult.freshness === 'Rotten'}>
+								{scanResult.freshness} ({(scanResult.confidence * 100).toFixed(1)}%)
+							</span>
+						</div>
+						{#if scanResult.freshness === 'Rotten' && scanResult.advice_ka}
+							<p class="strip-advisory">⚠️ {scanResult.advice_ka}</p>
+						{/if}
+					{/if}
+				</div>
+			{/if}
+
 			<div class="input-bar">
+				<label class="upload-btn" title="ფოტოს ატვირთვა">
+					📎
+					<input type="file" accept="image/*" onchange={handleImageUpload} />
+				</label>
 				<textarea
 					placeholder="დაუსვით ბარბალეს შეკითხვა..."
 					bind:value={chatInput}
@@ -151,14 +207,25 @@
 		</section>
 
 		<section class="scan-panel">
+			{#if session}
+				<div class="profile-card">
+					<p class="profile-name">👤 {session.username}</p>
+					<div class="profile-meta">
+						{#if session.region}<span class="profile-tag">📍 {localizeRegion(session.region)}</span>{/if}
+						{#if session.primary_crops}<span class="profile-tag">🌾 {localizeCrops(session.primary_crops)}</span>{/if}
+						{#if session.soil_metrics}<span class="profile-tag">🪨 {session.soil_metrics}</span>{/if}
+					</div>
+				</div>
+			{/if}
+
 			<label class="dropzone" class:has-image={!!imageUrl}>
 				{#if imageUrl}
 					<img src={imageUrl} alt="Uploaded crop" class="preview" />
 				{:else}
 					<div class="dropzone-inner">
 						<span class="upload-icon">📁</span>
-						<p>Upload a crop image</p>
-						<p class="supported">Supported: {SUPPORTED}</p>
+						<p>ატვირთეთ მოსავლის ფოტო</p>
+						<p class="supported">ამჟამად მხარდაჭერილია: {SUPPORTED}</p>
 					</div>
 				{/if}
 				<input type="file" accept="image/*" onchange={handleImageUpload} />
@@ -173,23 +240,40 @@
 			{#if scanResult}
 				<div class="metrics">
 					<div class="metric-row">
-						<span class="metric-label">Produce Type</span>
-						<span class="metric-value">{PRODUCE_EMOJI[scanResult.produce] ?? '🌿'} {scanResult.produce}</span>
+						<span class="metric-label">კულტურა</span>
+						<span class="metric-value">{PRODUCE_EMOJI[scanResult.produce] ?? '🌿'} {PRODUCTS_TO_GEORGIAN[scanResult.produce] ?? scanResult.produce}</span>
 					</div>
 					<div class="metric-row">
-						<span class="metric-label">Freshness</span>
+						<span class="metric-label">სიახლე</span>
 						<span class="badge" class:fresh={scanResult.freshness === 'Fresh'} class:rotten={scanResult.freshness === 'Rotten'}>
-							{scanResult.freshness} ({(scanResult.confidence * 100).toFixed(1)}%)
+							{scanResult.freshness === 'Fresh' ? 'ახალი' : 'გაფუჭებული'} ({(scanResult.confidence * 100).toFixed(1)}%)
 						</span>
 					</div>
 				</div>
 
 				{#if scanResult.freshness === 'Rotten' && scanResult.advice_ka}
 					<div class="advisory">
-						<p class="advisory-title">⚠️ კრიტიკული მდგომარეობა (Critical Situation Mitigation Advice)</p>
+						<p class="advisory-title">⚠️ კრიტიკული მდგომარეობა</p>
 						<p class="advisory-text">{scanResult.advice_ka}</p>
 					</div>
 				{/if}
+			{/if}
+
+			{#if alerts.length > 0}
+				<div class="alert-history">
+					<p class="alert-history-title">გაფრთხილებების ისტორია</p>
+					{#each alerts.slice(0, 5) as alert}
+						<div class="alert-item">
+							<div class="alert-item-header">
+								<span>{PRODUCE_EMOJI[alert.produce] ?? '🌿'} {PRODUCTS_TO_GEORGIAN[alert.produce] ?? alert.produce}</span>
+								<span class="alert-date">{alert.created_at.slice(0, 10)}</span>
+							</div>
+							{#if alert.advice_ka}
+								<p class="alert-advice">{alert.advice_ka}</p>
+							{/if}
+						</div>
+					{/each}
+				</div>
 			{/if}
 		</section>
 	</main>
@@ -260,7 +344,7 @@
 		gap: 0;
 	}
 
-	/* ── Chat ── */
+	/* Chat */
 	.chat-panel {
 		display: flex;
 		flex-direction: column;
@@ -358,7 +442,7 @@
 		cursor: not-allowed;
 	}
 
-	/* ── Scanner ── */
+	/* Scanner */
 	.scan-panel {
 		display: flex;
 		flex-direction: column;
@@ -482,5 +566,143 @@
 		font-size: 0.9rem;
 		line-height: 1.6;
 		color: #444;
+	}
+
+	/* Profile card */
+	.profile-card {
+		background: var(--cream);
+		border-radius: 10px;
+		padding: 0.75rem 1rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+	}
+	.profile-name {
+		font-weight: 600;
+		font-size: 0.95rem;
+		color: var(--dark);
+	}
+	.profile-meta {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+	}
+	.profile-tag {
+		background: white;
+		border: 1px solid #d0d0d0;
+		border-radius: 20px;
+		padding: 0.2rem 0.65rem;
+		font-size: 0.8rem;
+		color: #555;
+	}
+
+	/* Alert history */
+	.alert-history {
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+		margin-top: 0.25rem;
+	}
+	.alert-history-title {
+		font-size: 0.8rem;
+		font-weight: 600;
+		color: #888;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+	.alert-item {
+		background: #fffde7;
+		border: 1px solid #f0e68c;
+		border-radius: 8px;
+		padding: 0.6rem 0.75rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+	}
+	.alert-item-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		font-size: 0.88rem;
+		font-weight: 600;
+	}
+	.alert-date {
+		font-size: 0.75rem;
+		color: #999;
+		font-weight: 400;
+	}
+	.alert-advice {
+		font-size: 0.8rem;
+		color: #555;
+		line-height: 1.45;
+		display: -webkit-box;
+		-webkit-line-clamp: 3;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+
+	/* Upload btn (mobile only) */
+	.upload-btn {
+		display: none;
+		align-items: center;
+		justify-content: center;
+		width: 44px;
+		height: 44px;
+		border-radius: 50%;
+		background: var(--cream);
+		border: 1.5px solid var(--sage);
+		cursor: pointer;
+		font-size: 1.2rem;
+		flex-shrink: 0;
+		transition: background 0.15s;
+	}
+	.upload-btn:hover {
+		background: var(--sage);
+	}
+	.upload-btn input[type="file"] {
+		display: none;
+	}
+
+	/* Mobile scan strip (mobile only) */
+	.mobile-scan-strip {
+		display: none;
+	}
+
+	@media (max-width: 768px) {
+		main {
+			grid-template-columns: 1fr;
+		}
+		.scan-panel {
+			display: none;
+		}
+		.upload-btn {
+			display: flex;
+		}
+		.mobile-scan-strip {
+			display: flex;
+			flex-direction: column;
+			gap: 0.5rem;
+			padding: 0.6rem 1rem;
+			background: var(--cream);
+			border-top: 1.5px solid #e0e0e0;
+		}
+		.strip-row {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+		}
+		.strip-advisory {
+			font-size: 0.82rem;
+			line-height: 1.5;
+			color: #555;
+			max-height: 120px;
+			overflow-y: auto;
+		}
+		header {
+			padding: 0.6rem 1rem;
+		}
+		.brand {
+			font-size: 1rem;
+		}
 	}
 </style>
