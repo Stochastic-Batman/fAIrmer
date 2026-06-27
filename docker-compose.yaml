@@ -1,0 +1,39 @@
+services:
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - TRANSLATION_URL=http://tarjimani:5000
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - DB_PATH=/data/fairmer.db
+    volumes:
+      - fairmer_data:/data
+    depends_on:
+      - tarjimani
+      - ollama
+    restart: unless-stopped
+
+  tarjimani:
+    build: ./tarjimani
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama
+    entrypoint: ["/bin/sh", "-c", "ollama serve & until ollama list 2>/dev/null; do sleep 1; done && ollama pull deepseek-r1:7b && wait"]
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+
+volumes:
+  fairmer_data:
+  ollama_data:
